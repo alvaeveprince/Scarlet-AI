@@ -818,13 +818,27 @@ function setupFileUpload() {
 
   const reader = new FileReader();
 
-  reader.onload = evt => {
-    let content = evt.target.result;
+  reader.onload = async (evt) => {
+  let content = "";
 
-    // 🧠 Basic cleanup for binary-like files
-    if (typeof content !== "string") {
-      content = JSON.stringify(content);
-    }
+  // PDF FILE
+  if (file.type === "application/pdf") {
+    content = await extractPDFText(evt.target.result);
+  }
+
+  // TEXT / DOC / OTHER
+  else {
+    content = evt.target.result;
+  }
+
+  App.pendingAttachments.push({
+    type: "file",
+    name: file.name,
+    content: content
+  });
+
+  renderAttachmentPreviews();
+};
 
     App.pendingAttachments.push({
       type: 'file',
@@ -837,13 +851,38 @@ function setupFileUpload() {
 
   // 🧠 SMART READ MODE
   if (
-    file.type.includes("pdf") ||
-    file.name.endsWith(".pdf")
-  ) {
-    reader.readAsArrayBuffer(file); // safer for PDFs
-  } else {
-    reader.readAsText(file); // normal text/doc files
-  }
+  file.type.includes("pdf") ||
+  file.name.endsWith(".pdf")
+) {
+  reader.onload = async (evt) => {
+    const typedArray = new Uint8Array(evt.target.result);
+
+    // convert PDF → text using simple fallback
+    const text = await extractPDFText(typedArray);
+
+    App.pendingAttachments.push({
+      type: 'file',
+      name: file.name,
+      content: text
+    });
+
+    renderAttachmentPreviews();
+  };
+
+  reader.readAsArrayBuffer(file);
+} else {
+  reader.onload = evt => {
+    App.pendingAttachments.push({
+      type: 'file',
+      name: file.name,
+      content: evt.target.result
+    });
+
+    renderAttachmentPreviews();
+  };
+
+  reader.readAsText(file);
+}
 
   e.target.value = '';
 });
@@ -860,7 +899,19 @@ function setupFileUpload() {
     e.target.value = '';
   });
 }
+async function extractPDFText(fileBuffer) {
+  const pdf = await pdfjsLib.getDocument({ data: fileBuffer }).promise;
 
+  let text = "";
+
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(item => item.str).join(" ") + "\n";
+  }
+
+  return text;
+         }
 function renderAttachmentPreviews() {
   els.attachmentPreviews.innerHTML = '';
   App.pendingAttachments.forEach((att, i) => {
@@ -1024,3 +1075,28 @@ function toast(message, type = '') {
 // START
 // ============================================================
 document.addEventListener('DOMContentLoaded', init);
+
+async function extractPDFText(uint8Array) {
+  try {
+    const pdfjsLib = window.pdfjsLib;
+
+    if (!pdfjsLib) {
+      return "PDF text extraction not available. Please paste text manually.";
+    }
+
+    const pdf = await pdfjsLib.getDocument({ data: uint8Array }).promise;
+
+    let text = "";
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const strings = content.items.map(item => item.str).join(" ");
+      text += strings + "\n";
+    }
+
+    return text;
+  } catch (err) {
+    return "Could not read PDF content.";
+  }
+}
