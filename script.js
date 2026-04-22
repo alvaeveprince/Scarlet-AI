@@ -1028,30 +1028,6 @@ function bindEvents() {
     }
   });
 }
-async function extractPDFText(uint8Array) {
-  try {
-    const pdfjsLib = window.pdfjsLib;
-
-    if (!pdfjsLib) {
-      return "PDF text extraction not available. Please paste text manually.";
-    }
-
-    const pdf = await pdfjsLib.getDocument({ data: uint8Array }).promise;
-
-    let text = "";
-
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-      const strings = content.items.map(item => item.str).join(" ");
-      text += strings + "\n";
-    }
-
-    return text;
-  } catch (err) {
-    return "Could not read PDF content.";
-  }
-}
 
 // ============================================================
 // HELPERS
@@ -1082,7 +1058,30 @@ function toast(message, type = '') {
     setTimeout(() => el.remove(), 300);
   }, 2500);
 }
+async function extractPDFText(uint8Array) {
+  try {
+    const pdfjsLib = window.pdfjsLib;
 
+    if (!pdfjsLib) {
+      return "PDF text extraction not available. Please paste text manually.";
+    }
+
+    const pdf = await pdfjsLib.getDocument({ data: uint8Array }).promise;
+
+    let text = "";
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const strings = content.items.map(item => item.str).join(" ");
+      text += strings + "\n";
+    }
+
+    return text;
+  } catch (err) {
+    return "Could not read PDF content.";
+  }
+    }
 // ============================================================
 // START
 // ============================================================
