@@ -537,11 +537,7 @@ async function sendMessage() {
   const attachments = [...App.pendingAttachments];
 
   if (!text && !attachments.length) return;
-  if (!App.settings.apiKey) {
-    toast('Please add your Gemini API key in Settings → System', 'error');
-    openSettings();
-    return;
-  }
+  
 
   // Clear input
   els.messageInput.value = '';
@@ -577,7 +573,19 @@ async function sendMessage() {
   showTypingIndicator();
 
   try {
-    const aiText = await callGemini(userText, msgContent.imageData);
+    const res = await fetch("/api/chat", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    userText,
+    imageData: msgContent.imageData || null
+  })
+});
+
+const data = await res.json();
+const aiText = data.text || "No response";
     removeTypingIndicator();
 
     const aiMsg = addMessage('model', { text: aiText, role: 'model' });
