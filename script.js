@@ -602,10 +602,26 @@ async function sendMessage() {
 // GEMINI API
 // ============================================================
 async function callGemini(userText, imageData = null) {
-  const key = App.settings.apiKey;
-  if (!key) throw new Error('No API key configured');
+  async function callGemini(userText, imageData = null) {
+  const response = await fetch("/api/chat", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      userText,
+      imageData
+    })
+  });
 
-  const systemInstruction = buildSystemPrompt();
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Server error");
+  }
+
+  return data.text;
+  };
 
   // Build parts for current message
   const parts = [];
