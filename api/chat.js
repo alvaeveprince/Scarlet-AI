@@ -12,20 +12,18 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Missing API key on server" });
     }
 
-    // 🧠 SYSTEM INSTRUCTION (improved for stronger memory behavior)
+    // 🧠 SYSTEM PROMPT
     const systemInstruction = `
 You are Scarlet AI, a highly conversational assistant.
 
-CRITICAL BEHAVIOR RULES:
-- You ALWAYS have conversation context provided in messages
-- You MUST respond as if you remember the full conversation
+CRITICAL RULES:
+- Always maintain conversation context
 - NEVER say you cannot see past messages
-- Maintain continuity across all replies
-- Be natural, human-like, and context-aware
-- Refer to previous messages when relevant
+- Be natural, human-like, and contextual
+- If an image is provided, analyze it carefully
 `;
 
-    // 🧠 SAFE HISTORY NORMALIZATION (VERY IMPORTANT FIX)
+    // 🧠 SAFE HISTORY
     const safeHistory = Array.isArray(history)
       ? history.slice(-12).map(m => ({
           role: m.role === "model" ? "assistant" : m.role,
@@ -34,6 +32,32 @@ CRITICAL BEHAVIOR RULES:
             : (m.content || "")
         }))
       : [];
+
+    // 🧠 BUILD USER MESSAGE (WITH IMAGE SUPPORT FIX)
+    let userMessage;
+
+    if (imageData) {
+      userMessage = {
+        role: "user",
+        content: [
+          {
+            type: "image_url",
+            image_url: {
+              url: imageData
+            }
+          },
+          {
+            type: "text",
+            text: userText || "Describe this image"
+          }
+        ]
+      };
+    } else {
+      userMessage = {
+        role: "user",
+        content: userText || ""
+      };
+    }
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
@@ -52,14 +76,9 @@ CRITICAL BEHAVIOR RULES:
             content: systemInstruction
           },
 
-          // 🧠 conversation memory
           ...safeHistory,
 
-          // 🧠 current user message
-          {
-            role: "user",
-            content: userText || ""
-          }
+          userMessage
         ]
       })
     });
@@ -75,9 +94,7 @@ CRITICAL BEHAVIOR RULES:
       });
     }
 
-    return res.status(200).json({
-      text
-    });
+    return res.status(200).json({ text });
 
   } catch (err) {
     return res.status(500).json({ error: err.message });
