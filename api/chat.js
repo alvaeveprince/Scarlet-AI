@@ -4,9 +4,20 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { userText, imageData } = req.body;
+    const { userText, imageData, history } = req.body;
 
     const API_KEY = process.env.OPENROUTER_API_KEY;
+
+    const systemInstruction = `
+You are Scarlet AI, a highly conversational assistant.
+
+IMPORTANT RULES:
+- Remember conversation flow
+- Respond using full chat context
+- NEVER say you cannot see past messages
+- Always behave like a continuous conversation
+- Be natural, human-like, and context-aware
+`;
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
@@ -19,7 +30,22 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: "openai/gpt-4o-mini",
         messages: [
-          { role: "user", content: userText }
+          {
+            role: "system",
+            content: systemInstruction
+          },
+
+          ...(history || []).slice(-12).map(m => ({
+            role: m.role === "model" ? "assistant" : m.role,
+            content: m.parts
+              ? m.parts.map(p => p.text || "").join(" ")
+              : m.content
+          })),
+
+          {
+            role: "user",
+            content: userText
+          }
         ]
       })
     });
@@ -33,4 +59,4 @@ export default async function handler(req, res) {
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
-  }
+}
