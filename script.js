@@ -579,9 +579,10 @@ async function sendMessage() {
     "Content-Type": "application/json"
   },
   body: JSON.stringify({
-    userText,
-    imageData: msgContent.imageData || null
-  })
+  userText,
+  imageData: msgContent.imageData || null,
+  history: App.conversationHistory
+})
 });
 
 const data = await res.json();
@@ -592,7 +593,7 @@ const aiText = data.text || "No response";
     appendMessageDOM(aiMsg);
 
     if (App.settings.memoryEnabled) {
-      App.conversationHistory.push({ role: 'model', parts: [{ text: aiText }] });
+      App.conversationHistory.push({ role: 'assistant', parts: [{ text: aiText }] });
     }
   } catch (err) {
     removeTypingIndicator();
