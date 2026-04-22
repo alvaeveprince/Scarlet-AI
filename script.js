@@ -813,16 +813,40 @@ function setupFileUpload() {
   els.imageBtn.addEventListener('click', () => els.imageInput.click());
 
   els.fileInput.addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = evt => {
-      App.pendingAttachments.push({ type: 'file', name: file.name, content: evt.target.result });
-      renderAttachmentPreviews();
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  });
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = evt => {
+    let content = evt.target.result;
+
+    // 🧠 Basic cleanup for binary-like files
+    if (typeof content !== "string") {
+      content = JSON.stringify(content);
+    }
+
+    App.pendingAttachments.push({
+      type: 'file',
+      name: file.name,
+      content: content
+    });
+
+    renderAttachmentPreviews();
+  };
+
+  // 🧠 SMART READ MODE
+  if (
+    file.type.includes("pdf") ||
+    file.name.endsWith(".pdf")
+  ) {
+    reader.readAsArrayBuffer(file); // safer for PDFs
+  } else {
+    reader.readAsText(file); // normal text/doc files
+  }
+
+  e.target.value = '';
+});
 
   els.imageInput.addEventListener('change', e => {
     const file = e.target.files[0];
