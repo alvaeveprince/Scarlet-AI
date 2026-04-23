@@ -612,9 +612,7 @@ async function sendMessage() {
 // GEMINI API
 // ============================================================
 async function callGemini(userText, imageData = null) {
-  const key = App.settings.apiKey;
-  if (!key) throw new Error('No API key set — open Settings and add your OpenRouter key');
-
+  
   const systemInstruction = buildSystemPrompt();
 
   // Build conversation messages for OpenRouter (OpenAI-compatible format)
@@ -644,33 +642,23 @@ async function callGemini(userText, imageData = null) {
   messages.push({ role: 'user', content: userContent });
 
   const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${key}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': window.location.origin,
-      'X-Title': 'Scarlet AI',
-    },
-    body: JSON.stringify({
-      model: 'openrouter/auto',
-      messages,
-      max_tokens: getMaxTokens(),
-      temperature: App.settings.creativity,
-    }),
-  });
+  const resp = await fetch('/api/chat', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    message: userText
+  })
+});
 
-  if (!resp.ok) {
-    const err = await resp.json().catch(() => ({}));
-    const msg = err?.error?.message || `HTTP ${resp.status}`;
-    if (resp.status === 401) throw new Error('Invalid API key — check your OpenRouter key in Settings');
-    if (resp.status === 429) throw new Error('Rate limit reached — try again later');
-    throw new Error(msg);
-  }
+const data = await resp.json();
 
-  const data = await resp.json();
-  const text = data?.choices?.[0]?.message?.content;
-  if (!text) throw new Error('Empty response from AI');
-  return text;
+if (!resp.ok) {
+  throw new Error(data.error || 'Request failed');
+}
+
+return data.reply;
 }
 
 function buildSystemPrompt() {
