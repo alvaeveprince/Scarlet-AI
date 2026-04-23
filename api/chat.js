@@ -12,9 +12,6 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Missing API key on server" });
     }
 
-    // =========================
-    // SYSTEM PROMPT
-    // =========================
     const systemInstruction = `
 You are Scarlet AI, a highly conversational assistant.
 
@@ -24,108 +21,13 @@ CRITICAL RULES:
 - If an image is provided, analyze it carefully
 `;
 
-    // =========================
-    // SAFE HISTORY (FIXED)
-    // =========================
     const safeHistory = Array.isArray(history)
       ? history.slice(-12).map(m => ({
           role: m.role === "model" ? "assistant" : "user",
-          content:
-            m.parts?.map(p => p.text).filter(Boolean).join(" ") ||
-            m.content ||
-            ""
+          content: m.parts?.map(p => p.text).join(" ") || m.content || ""
         }))
       : [];
 
-    // =========================
-    // USER MESSAGE (SAFE IMAGE HANDLING)
-    // =========================
-    let userMessage;
-
-    if (imageData) {
-      userMessage = {
-        role: "user",
-        content: [
-          {
-            type: "image_url",
-            image_url: {
-              url: imageData.startsWith("data:")
-                ? imageData
-                : `data:image/png;base64,${imageData}`
-            }
-          },
-          {
-            type: "text",
-            text: userText || "Describe this image"
-          }
-        ]
-      };
-    } else {
-      userMessage = {
-        role: "user",
-        content: userText || ""
-      };
-    }
-
-    // =========================
-    // OPENROUTER REQUEST
-    // =========================
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${API_KEY}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": req.headers.origin || "https://vercel.app",
-        "X-Title": "Scarlet AI"
-      },
-      body: JSON.stringify({
-        model: "openai/gpt-4o-mini",
-
-        messages: [
-          { role: "system", content: systemInstruction },
-          ...safeHistory,
-          userMessage
-        ],
-
-        temperature: 0.7,
-        max_tokens: 1500
-      })
-    });
-
-    const data = await response.json();
-
-    // =========================
-    // ERROR HANDLING
-    // =========================
-    if (!response.ok) {
-      console.log("OpenRouter Error:", data);
-      return res.status(response.status).json({
-        error: data?.error?.message || "OpenRouter request failed",
-        raw: data
-      });
-    }
-
-    const text = data?.choices?.[0]?.message?.content;
-
-    if (!text) {
-      return res.status(500).json({
-        error: "Empty response from AI",
-        raw: data
-      });
-    }
-
-    return res.status(200).json({ text });
-
-  } catch (err) {
-    console.error("Server Error:", err);
-    return res.status(500).json({ error: err.message });
-  }
-}        }))
-      : [];
-
-    // =========================
-    // USER MESSAGE (SAFE IMAGE HANDLING)
-    // =========================
     let userMessage;
 
     if (imageData) {
@@ -153,9 +55,6 @@ CRITICAL RULES:
       };
     }
 
-    // =========================
-    // OPENROUTER REQUEST
-    // =========================
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -166,13 +65,11 @@ CRITICAL RULES:
       },
       body: JSON.stringify({
         model: "openai/gpt-4o-mini",
-
         messages: [
           { role: "system", content: systemInstruction },
           ...safeHistory,
           userMessage
         ],
-
         temperature: 0.7,
         max_tokens: 1500
       })
@@ -180,24 +77,16 @@ CRITICAL RULES:
 
     const data = await response.json();
 
-    // =========================
-    // ERROR HANDLING (FIXED)
-    // =========================
     if (!response.ok) {
-      console.log("OpenRouter Error:", data);
       return res.status(response.status).json({
-        error: data?.error?.message || "OpenRouter request failed",
-        raw: data
+        error: data?.error?.message || "OpenRouter request failed"
       });
     }
 
     const text = data?.choices?.[0]?.message?.content;
 
     if (!text) {
-      return res.status(500).json({
-        error: "Empty response from AI",
-        raw: data
-      });
+      return res.status(500).json({ error: "Empty response from AI" });
     }
 
     return res.status(200).json({ text });
