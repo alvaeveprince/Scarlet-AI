@@ -645,18 +645,18 @@ async function callGemini(userText, imageData = null) {
     })
   });
 
+  const rawText = await resp.text();
+
   let data;
+  try {
+    data = JSON.parse(rawText);
+  } catch (e) {
+    throw new Error("Backend did not return valid JSON:\n" + rawText);
+  }
 
-try {
-  data = await resp.json();
-} catch (e) {
-  const raw = await resp.text();
-  throw new Error("Server did not return JSON: " + raw);
-}
-
-if (!resp.ok) {
-  throw new Error(data?.error || 'Request failed');
-}
+  if (!resp.ok) {
+    throw new Error(data?.error || rawText || 'Request failed');
+  }
 
   return data.text;
 }
