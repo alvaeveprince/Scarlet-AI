@@ -871,32 +871,50 @@ function closeSidebar() {
 // ============================================================
 function bindEvents() {
   // New chat
-  els.newChatBtn.addEventListener('click', () => { newChat(); closeSidebar(); });
+  els.newChatBtn?.addEventListener('click', () => {
+    newChat();
+    closeSidebar();
+  });
 
   // Send
-  els.sendBtn.addEventListener('click', sendMessage);
-  els.messageInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  els.sendBtn?.addEventListener('click', sendMessage);
+
+  els.messageInput?.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
   });
-  els.messageInput.addEventListener('input', autoResizeTextarea);
+
+  els.messageInput?.addEventListener('input', autoResizeTextarea);
 
   // Sidebar
-  els.hamburger.addEventListener('click', toggleSidebar);
-  els.sidebarClose.addEventListener('click', closeSidebar);
-  els.sidebarOverlay.addEventListener('click', closeSidebar);
+  els.hamburger?.addEventListener('click', toggleSidebar);
+  els.sidebarClose?.addEventListener('click', closeSidebar);
+  els.sidebarOverlay?.addEventListener('click', closeSidebar);
 
   // Search chats
-  els.searchChats.addEventListener('input', () => renderChatList(els.searchChats.value));
+  els.searchChats?.addEventListener('input', () =>
+    renderChatList(els.searchChats.value)
+  );
 
   // Settings
-  els.openSettings.addEventListener('click', openSettings);
-  els.topSettingsBtn.addEventListener('click', openSettings);
-  els.closeSettings.addEventListener('click', closeSettings);
-  els.settingsBackdrop.addEventListener('click', e => { if (e.target === els.settingsBackdrop) closeSettings(); });
+  els.openSettings?.addEventListener('click', openSettings);
+  els.topSettingsBtn?.addEventListener('click', openSettings);
+  els.closeSettings?.addEventListener('click', closeSettings);
+
+  els.settingsBackdrop?.addEventListener('click', e => {
+    if (e.target === els.settingsBackdrop) closeSettings();
+  });
 
   // Lightbox
-  els.lightboxClose.addEventListener('click', () => els.lightbox.classList.remove('open'));
-  els.lightbox.addEventListener('click', e => { if (e.target === els.lightbox) els.lightbox.classList.remove('open'); });
+  els.lightboxClose?.addEventListener('click', () =>
+    els.lightbox.classList.remove('open')
+  );
+
+  els.lightbox?.addEventListener('click', e => {
+    if (e.target === els.lightbox) els.lightbox.classList.remove('open');
+  });
 
   // Prompt chips
   document.querySelectorAll('.prompt-chip').forEach(chip => {
@@ -907,14 +925,16 @@ function bindEvents() {
     });
   });
 
-  // File upload setup
-  setupFileUpload();
+  // File upload (SAFE)
+  if (typeof setupFileUpload === 'function') {
+    setupFileUpload();
+  }
 
-  // Keyboard escape
+  // Escape key
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       closeSettings();
-      els.lightbox.classList.remove('open');
+      els.lightbox?.classList.remove('open');
     }
   });
 }
