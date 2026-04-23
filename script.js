@@ -259,12 +259,24 @@ function setupSettingsPanels() {
     if (!els.apiKeyInput.value) els.apiKeyInput.value = App.settings.apiKey ? '•'.repeat(12) : '';
   });
   els.saveApiKey.addEventListener('click', () => {
-    App.settings.apiKey = els.apiKeyInput.value.trim();
-    save();
-    toast('API key saved', 'success');
-    els.apiKeyInput.type = 'password';
-    els.apiKeyInput.value = App.settings.apiKey ? '•'.repeat(12) : '';
-  });
+  const enteredKey = els.apiKeyInput.value.trim();
+
+  // Prevent saving fake dots
+  if (!enteredKey || enteredKey.includes('•')) {
+    toast('Enter your real OpenRouter API key', 'error');
+    return;
+  }
+
+  // Save real key
+  App.settings.apiKey = enteredKey;
+  save();
+
+  // Mask it again
+  els.apiKeyInput.type = 'password';
+  els.apiKeyInput.value = '••••••••••';
+
+  toast('API key saved', 'success');
+});
   els.resetApiKey.addEventListener('click', () => {
     App.settings.apiKey = '';
     els.apiKeyInput.value = '';
