@@ -633,55 +633,25 @@ async function sendMessage() {
 // GEMINI API
 // ============================================================
 async function callGemini(userText, imageData = null) {
-  
-  const systemInstruction = buildSystemPrompt();
-
-  // Build conversation messages for OpenRouter (OpenAI-compatible format)
-  const messages = [{ role: 'system', content: systemInstruction }];
-
-  // Add memory/history if enabled
-  if (App.settings.memoryEnabled && App.conversationHistory.length > 1) {
-    const historySlice = App.conversationHistory.slice(-6);
-    for (const m of historySlice) {
-      messages.push({
-        role: m.role === 'model' ? 'assistant' : 'user',
-        content: m.parts.map(p => p.text || '[image]').join(' '),
-      });
-    }
-  }
-
-  // Build current user message content (text + optional image)
-  let userContent;
-  if (imageData) {
-    userContent = [
-      { type: 'text', text: userText || '(image sent)' },
-      { type: 'image_url', image_url: { url: imageData } },
-    ];
-  } else {
-    userContent = userText || '';
-  }
-  messages.push({ role: 'user', content: userContent });
-
   const resp = await fetch('/api/chat', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    userText,
-    imageData,
-    history: App.conversationHistory
-  })
-});
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      userText,
+      imageData,
+      history: App.conversationHistory
+    })
+  });
 
-const data = await resp.json();
+  const data = await resp.json();
 
-if (!resp.ok) {
-  throw new Error(data.error || 'Request failed');
-}
+  if (!resp.ok) {
+    throw new Error(data.error || 'Request failed');
+  }
 
-// backend returns: { text }
-return data.text;
+  return data.text;
 }
 
 function buildSystemPrompt() {
