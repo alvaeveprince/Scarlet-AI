@@ -326,10 +326,28 @@ function loadChat(id) {
   App.conversationHistory = [];
   // Rebuild conversation history from messages
   chat.messages.forEach(m => {
-    if (m.role !== 'system') {
-      App.conversationHistory.push({ role: m.role === 'model' ? 'model' : 'user', parts: [{ text: m.text || '' }] });
+  if (m.role !== 'system') {
+
+    let textContent = '';
+
+    if (typeof m.text === 'string') {
+      textContent = m.text;
     }
-  });
+
+    if (m.fileContent) {
+      textContent += `\n\n[File: ${m.fileName || 'file'}]\n${m.fileContent}`;
+    }
+
+    if (m.imageData && !textContent) {
+      textContent = '(image sent)';
+    }
+
+    App.conversationHistory.push({
+      role: m.role === 'model' ? 'assistant' : m.role,
+      parts: [{ text: textContent }]
+    });
+  }
+});
   els.topbarTitle.textContent = chat.title;
   renderMessages(chat.messages);
   renderChatList();
@@ -590,15 +608,18 @@ async function sendMessage() {
     const aiText = await callGemini(userText, msgContent.imageData || null);
     removeTypingIndicator();
 
-    const aiMsg = addMessage('model', { text: aiText, role: 'model' });
+    const aiMsg = addMessage('assistant', { text: aiText, role: 'assistant' });
     appendMessageDOM(aiMsg);
 
     if (App.settings.memoryEnabled) {
       App.conversationHistory.push({ role: 'assistant', parts: [{ text: aiText }] });
     }
+     if (App.conversationHistory.length > 20) {
+  App.conversationHistory = App.conversationHistory.slice(-20);
+     }
   } catch (err) {
     removeTypingIndicator();
-    const errMsg = addMessage('model', { text: `Something went wrong. Please try again.\n\n*Error: ${err.message}*`, role: 'model' });
+    const errMsg = addMessage('assistant', { text: `Something went wrong. Please try again.\n\n*Error: ${err.message}*`, role: 'assistant' });
     appendMessageDOM(errMsg);
     toast(err.message, 'error');
   } finally {
@@ -641,14 +662,15 @@ async function callGemini(userText, imageData = null) {
   }
   messages.push({ role: 'user', content: userContent });
 
-  const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
   const resp = await fetch('/api/chat', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json'
   },
   body: JSON.stringify({
-    message: userText
+    userText,
+    imageData,
+    history: App.conversationHistory
   })
 });
 
@@ -658,7 +680,8 @@ if (!resp.ok) {
   throw new Error(data.error || 'Request failed');
 }
 
-return data.reply;
+// backend returns: { text }
+return data.text;
 }
 
 function buildSystemPrompt() {
@@ -711,7 +734,7 @@ window.regenerateMsg = async function(msgId) {
 
   App.isLoading = true;
   els.sendBtn.style.opacity = '0.5';
-  const placeholderMsg = addMessage('model', { text: 'Thinking...', role: 'model' });
+  const placeholderMsg = addMessage('assistant', { text: 'Thinking...', role: 'assistant' });
   appendMessageDOM(placeholderMsg);
   showTypingIndicator();
 
