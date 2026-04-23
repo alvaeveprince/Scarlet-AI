@@ -750,25 +750,36 @@ window.openLightbox = function(src) {
 // FILE / IMAGE UPLOAD
 // ============================================================
 function setupFileUpload() {
-  els.fileBtn.addEventListener('click', () => els.fileInput.click());
-  els.imageBtn.addEventListener('click', () => els.imageInput.click());
+  if (!els.fileBtn && !els.imageBtn && !els.fileInput && !els.imageInput) return;
 
-  els.fileInput.addEventListener('change', async e => {
+  els.fileBtn?.addEventListener('click', () => els.fileInput?.click());
+  els.imageBtn?.addEventListener('click', () => els.imageInput?.click());
+
+  els.fileInput?.addEventListener('change', async e => {
     const file = e.target.files[0];
     if (!file) return;
+
     const reader = new FileReader();
 
     if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
       reader.onload = async evt => {
         const typedArray = new Uint8Array(evt.target.result);
         const text = await extractPDFText(typedArray);
-        App.pendingAttachments.push({ type: 'file', name: file.name, content: text });
+        App.pendingAttachments.push({
+          type: 'file',
+          name: file.name,
+          content: text
+        });
         renderAttachmentPreviews();
       };
       reader.readAsArrayBuffer(file);
     } else {
       reader.onload = evt => {
-        App.pendingAttachments.push({ type: 'file', name: file.name, content: evt.target.result });
+        App.pendingAttachments.push({
+          type: 'file',
+          name: file.name,
+          content: evt.target.result
+        });
         renderAttachmentPreviews();
       };
       reader.readAsText(file);
@@ -777,36 +788,21 @@ function setupFileUpload() {
     e.target.value = '';
   });
 
-  els.imageInput.addEventListener('change', e => {
+  els.imageInput?.addEventListener('change', e => {
     const file = e.target.files[0];
     if (!file) return;
+
     const reader = new FileReader();
     reader.onload = evt => {
-      App.pendingAttachments.push({ type: 'image', name: file.name, data: evt.target.result });
+      App.pendingAttachments.push({
+        type: 'image',
+        name: file.name,
+        data: evt.target.result
+      });
       renderAttachmentPreviews();
     };
     reader.readAsDataURL(file);
     e.target.value = '';
-  });
-}
-
-function renderAttachmentPreviews() {
-  els.attachmentPreviews.innerHTML = '';
-  App.pendingAttachments.forEach((att, i) => {
-    const div = document.createElement('div');
-    div.className = 'att-preview';
-    if (att.type === 'image') {
-      div.innerHTML = `<img class="att-preview-img" src="${att.data}" alt="${att.name}" /><span>${att.name}</span><button class="att-remove" data-i="${i}">✕</button>`;
-    } else {
-      div.innerHTML = `<span>📄</span><span>${escHtml(att.name)}</span><button class="att-remove" data-i="${i}">✕</button>`;
-    }
-    els.attachmentPreviews.appendChild(div);
-  });
-  els.attachmentPreviews.querySelectorAll('.att-remove').forEach(btn => {
-    btn.addEventListener('click', () => {
-      App.pendingAttachments.splice(parseInt(btn.dataset.i), 1);
-      renderAttachmentPreviews();
-    });
   });
 }
 
@@ -871,70 +867,78 @@ function closeSidebar() {
 // ============================================================
 function bindEvents() {
   // New chat
-  els.newChatBtn?.addEventListener('click', () => {
+  safeBind(els.newChatBtn, 'click', () => {
     newChat();
     closeSidebar();
   });
 
-  // Send
-  els.sendBtn?.addEventListener('click', sendMessage);
+  // Send message
+  safeBind(els.sendBtn, 'click', sendMessage);
 
-  els.messageInput?.addEventListener('keydown', e => {
+  safeBind(els.messageInput, 'keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
   });
 
-  els.messageInput?.addEventListener('input', autoResizeTextarea);
+  safeBind(els.messageInput, 'input', autoResizeTextarea);
 
   // Sidebar
-  els.hamburger?.addEventListener('click', toggleSidebar);
-  els.sidebarClose?.addEventListener('click', closeSidebar);
-  els.sidebarOverlay?.addEventListener('click', closeSidebar);
+  safeBind(els.hamburger, 'click', toggleSidebar);
+  safeBind(els.sidebarClose, 'click', closeSidebar);
+  safeBind(els.sidebarOverlay, 'click', closeSidebar);
 
-  // Search chats
-  els.searchChats?.addEventListener('input', () =>
-    renderChatList(els.searchChats.value)
-  );
+  // Search
+  safeBind(els.searchChats, 'input', () => {
+    renderChatList(els.searchChats.value);
+  });
 
   // Settings
-  els.openSettings?.addEventListener('click', openSettings);
-  els.topSettingsBtn?.addEventListener('click', openSettings);
-  els.closeSettings?.addEventListener('click', closeSettings);
+  safeBind(els.openSettings, 'click', openSettings);
+  safeBind(els.topSettingsBtn, 'click', openSettings);
+  safeBind(els.closeSettings, 'click', closeSettings);
 
-  els.settingsBackdrop?.addEventListener('click', e => {
+  safeBind(els.settingsBackdrop, 'click', e => {
     if (e.target === els.settingsBackdrop) closeSettings();
   });
 
   // Lightbox
-  els.lightboxClose?.addEventListener('click', () =>
-    els.lightbox.classList.remove('open')
-  );
+  safeBind(els.lightboxClose, 'click', () => {
+    els.lightbox?.classList.remove('open');
+  });
 
-  els.lightbox?.addEventListener('click', e => {
-    if (e.target === els.lightbox) els.lightbox.classList.remove('open');
+  safeBind(els.lightbox, 'click', e => {
+    if (e.target === els.lightbox) {
+      els.lightbox.classList.remove('open');
+    }
   });
 
   // Prompt chips
   document.querySelectorAll('.prompt-chip').forEach(chip => {
     chip.addEventListener('click', () => {
-      els.messageInput.value = chip.dataset.prompt;
-      autoResizeTextarea();
+      if (!els.messageInput) return;
+      els.messageInput.value = chip.dataset.prompt || '';
+      autoResizeTextarea?.();
       els.messageInput.focus();
     });
   });
 
-  // File upload (SAFE)
+  // File upload (safe guard)
   if (typeof setupFileUpload === 'function') {
-    setupFileUpload();
+    try {
+      setupFileUpload();
+    } catch (err) {
+      console.warn('File upload setup failed:', err);
+    }
   }
 
-  // Escape key
+  // Escape key (global safe)
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
-      closeSettings();
+      closeSettings?.();
       els.lightbox?.classList.remove('open');
+      closeSidebar?.();
     }
   });
 }
@@ -946,6 +950,11 @@ function autoResizeTextarea() {
   const ta = els.messageInput;
   ta.style.height = 'auto';
   ta.style.height = Math.min(ta.scrollHeight, 160) + 'px';
+}
+
+function safeBind(el, event, handler) {
+  if (!el) return;
+  el.addEventListener(event, handler);
 }
 
 function escHtml(str) {
